@@ -16,11 +16,10 @@
  * The transport
  *   The player is created on the first PLAY (or the first live note) with
  *   latencyHint 'interactive' and plays a thin wrapper around the piece
- *   conductor (JamConductor below). Stopped, the wrapper plans short silent
- *   bars (400 bpm, 0.6 s) so live notes keep sounding and PLAY lands within
- *   about half a second; the audio suspends after a minute with nothing
- *   played. STOP ducks the master until the first silent bar, since the bar
- *   already scheduled cannot be unscheduled.
+ *   conductor (JamConductor below). STOP cuts what is scheduled and idles
+ *   the player (no bars planned, live notes still sound); PLAY and SEEK
+ *   seek the piece conductor and start a fresh bar at once. The audio
+ *   suspends after a minute with nothing played.
  *
  * Hooks for the recorder and the instruments
  *   - `live(layer, sound, vel, pan?)`: play a note now; starts the audio from
@@ -29,7 +28,7 @@
  *   - `heardTime(offset = 0)`: ac.currentTime - player.latency - offset, the
  *     audio-clock time of what the listener hears now.
  *   - `positionAt(time)`: { abs, loopBar, step } of an audio time; loopBar is
- *     -1 during count-in and silent bars. Notes wrapping the loop end: the
+ *     -1 during count-in. Notes wrapping the loop end: the
  *     recorder maps them itself (loopBar is already modulo the loop).
  *   - `onBar(cb)`: every bar as it starts sounding (plan.meta.loopBar set for loop bars).
  *   - `position`: reactive { bar, step, abs, count } updated per animation
@@ -67,7 +66,6 @@ const LS_PREFS = 'jam.prefs'
 const MAX_UNDO = 100
 const MAX_LOCAL = 40
 const MERGE_MS = 1500
-const IDLE_BPM = 400
 const SUSPEND_MS = 60_000
 const VOLUME = 0.85
 export const INSTRUMENTS: readonly Instrument[] = ['piano', 'guitar', 'bass', 'drums', 'touch']
@@ -122,7 +120,7 @@ function say(text: string, tone: Tone = 'info'): void {
 // ---- the conductor wrapper ---------------------------------------------------------------
 
 interface JamConductor extends ConductorLike {
-  /** 'idle': silent short bars; 'play': the piece (after `countBars` click bars). */
+  /** 'idle': stopped (the player plans nothing then); 'play': the piece (after `countBars` click bars). */
   mode: 'idle' | 'play'
   countBars: number
   /** The loop bar an absolute bar index played (-1 for count-in), if it was a loop bar. */
@@ -162,21 +160,9 @@ function createJamConductor(inner: PieceConductor): JamConductor {
         remember(index, p.meta.loopBar ?? -1)
         return p
       }
+      // Stopped, the player is idle and asks for nothing; should a bar be asked for anyway, it is silent.
       const p = peek()
-      return {
-        ...p,
-        index,
-        bpmStart: IDLE_BPM,
-        bpmEnd: IDLE_BPM,
-        swing: 0,
-        notes: [],
-        drums: [],
-        ambience: {},
-        ambienceFadeBars: 1,
-        // Live notes keep the reverb; the delay (timed from the bar's tempo) and the pump rest.
-        fx: { ...p.fx, delay: 0, pump: 0 },
-        meta: { ...p.meta, section: 'IDLE', loopBar: undefined, active: [], nextChord: undefined },
-      }
+      return { ...p, index, notes: [], drums: [], meta: { ...p.meta, section: 'IDLE', loopBar: undefined, active: [], nextChord: undefined } }
     },
     setControls: c => inner.setControls(c),
     get controls() { return inner.controls },
@@ -192,8 +178,6 @@ let inner: PieceConductor | null = null
 let jc: JamConductor | null = null
 const player = shallowRef<RadioPlayer | null>(null)
 const barListeners = new Set<(plan: BarPlan) => void>()
-let ducked = false
-let duckUntil = 0
 let suspendTimer: ReturnType<typeof setTimeout> | null = null
 let raf = 0
 
@@ -215,21 +199,9 @@ function ensurePlayer(): RadioPlayer {
 }
 
 function onPlayerBar(plan: BarPlan): void {
-  if (ducked && plan.index >= duckUntil) {
-    ducked = false
-    player.value?.setVolume(VOLUME)
-  }
   for (const cb of barListeners) {
     try { cb(plan) } catch (err) { console.error('jam: onBar listener failed', err) }
   }
-}
-
-/** Silence what is already scheduled until the first bar planned from now on sounds. */
-function duck(): void {
-  if (!player.value || !jc) return
-  ducked = true
-  duckUntil = jc.nextIndex
-  player.value.setVolume(0)
 }
 
 function armSuspend(): void {
@@ -242,17 +214,18 @@ function armSuspend(): void {
   }, SUSPEND_MS)
 }
 
-function startAudio(): Promise<void> {
+/** Wake the audio from a gesture: playing the loop, or idle for live notes. */
+function startAudio(idle: boolean): Promise<void> {
   const pl = ensurePlayer()
   try {
     // Safari 17+: play as media (through the silent switch), not as a UI sound.
     const nav = navigator as Navigator & { audioSession?: { type: string } }
     if (nav.audioSession) nav.audioSession.type = 'playback'
   } catch { /* not supported */ }
-  if (!ducked) pl.setVolume(VOLUME)
+  pl.setVolume(VOLUME)
   audible.value = true
   armSuspend()
-  return pl.start().catch((e) => {
+  return pl.start({ idle }).catch((e) => {
     audible.value = false
     playing.value = false
     say('AUDIO WOULD NOT START', 'warn')
@@ -269,9 +242,10 @@ function play(opts: { from?: number; countIn?: boolean } = {}): Promise<void> {
   jc!.countBars = opts.countIn ? 1 : 0
   jc!.mode = 'play'
   playing.value = true
-  // A quick STOP → PLAY: stay silent until the loop's first bar instead of finishing the old one.
-  if (ducked) duckUntil = jc!.nextIndex
-  if (!pl.playing || pl.context?.state !== 'running') return startAudio().catch(() => {})
+  if (!pl.playing || pl.context?.state !== 'running') return startAudio(false).catch(() => {})
+  // Already sounding (PLAY again from another bar): drop what is scheduled; idle: start a fresh bar.
+  if (pl.idle) pl.setIdle(false)
+  else pl.cut()
   armSuspend()
   return Promise.resolve()
 }
@@ -285,7 +259,8 @@ function stop(): void {
   if (!jc || !player.value) return
   jc.mode = 'idle'
   jc.countBars = 0
-  duck()
+  player.value.cut()
+  player.value.setIdle(true)
   armSuspend()
 }
 
@@ -306,7 +281,10 @@ function seek(loopBar: number): void {
   const n = E.loopBars(piece.value)
   const b = ((Math.round(loopBar) % n) + n) % n
   cursor.value = b
-  if (playing.value) inner?.seek(b)
+  if (playing.value && inner && player.value) {
+    inner.seek(b)
+    player.value.cut()
+  }
 }
 
 const NOOP: LiveNote = { release() {} }
@@ -318,7 +296,7 @@ function live(layer: Layer, sound: LiveSound, vel: number, pan?: number): LiveNo
   if (pl.playing && pl.context?.state === 'running') return pl.live(layer, sound, vel, pan) ?? NOOP
   let released = false
   let note: LiveNote | null = null
-  startAudio().then(() => { if (!released) note = pl.live(layer, sound, vel, pan) }).catch(() => {})
+  startAudio(true).then(() => { if (!released) note = pl.live(layer, sound, vel, pan) }).catch(() => {})
   return { release() { released = true; note?.release() } }
 }
 
