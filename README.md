@@ -42,14 +42,17 @@ server/api/                 proxies to radio-api, gated by requireMember (server
   start a fresh bar at once.
 - A piece is plain text per bar (notation in `radio/engine/piece/types.ts`,
   `radio/docs/piece.md`). Every edit makes a new piece; undo keeps up to 100
-  snapshots. The piece autosaves to localStorage (`jam.piece`, the list in
+  snapshots. Tracks go with × on their row (DEL behind the glyph on a
+  phone), DEL TRACKS on a selection, or DROP EMPTY TRACKS in the JAM
+  menu; undo brings them back. The piece autosaves to localStorage (`jam.piece`, the list in
   `jam.pieces`); members also SAVE to radio-api.
 - Recording: a note's place is `positionAt(heardTime())`, the audio time
   minus the output latency and a user offset (REC options). Takes are
   written at each loop wrap and when REC stops: overdub or replace,
   quantized (drums always to sixteenths), over the loop or a selection.
 - Keys: Space play/stop, Enter record, [ ] intensity, Tab instrument,
-  Ctrl/Cmd+Z undo, Ctrl/Cmd+C/V copy/paste bars, Delete clears, ? help;
+  Ctrl/Cmd+Z undo, Ctrl/Cmd+C/V copy/paste bars, Delete clears, Shift+Delete
+  deletes the selected tracks, ? help;
   each instrument's own keys are listed in HELP.
 - Access: anyone can play; Reader members on the allowlist save pieces and
   use Opus. In `nuxt dev` on localhost a stand-in member (`dev@localhost`)

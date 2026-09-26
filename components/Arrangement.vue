@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--bg);
-  --head-w: 330px;
+  --head-w: 360px;
 }
 .arr__inner { position: relative; width: max-content; min-width: 100%; min-height: 100%; display: flex; flex-direction: column; }
 
@@ -384,7 +384,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 899px) {
-  .arr { --head-w: 250px; }
+  .arr { --head-w: 270px; }
 }
 @media (max-width: 599px) {
   .arr { --head-w: 150px; }

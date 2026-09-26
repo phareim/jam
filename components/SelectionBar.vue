@@ -7,13 +7,15 @@
     <button type="button" class="px-btn px-btn--dim" :disabled="piece.phrases >= 4" :title="`COPY PHRASE ${phrase + 1} AFTER ITSELF`" @click="jam.dupPhrase(phrase)">DUP PHRASE</button>
     <button type="button" class="px-btn" title="KEEP THESE BARS AS A SNIPPET" @click="dialogs.open('snippet', { selection: sel })">SNIPPET</button>
     <button type="button" class="px-btn px-btn--pink" :disabled="sel.trackIds.length !== 1" title="EDIT THIS TRACK STEP BY STEP" @click="dialogs.open('step', { trackId: sel.trackIds[0], bar: sel.from })">EDIT</button>
+    <button type="button" class="px-btn px-btn--dim sb__del" :title="`DELETE ${tracks === 1 ? 'THIS TRACK' : 'THESE TRACKS'} [SHIFT+DELETE]`" @click="jam.removeTracks(sel.trackIds)">DEL {{ tracks === 1 ? 'TRACK' : `${tracks} TRACKS` }}</button>
     <button type="button" class="sb__x" title="LET GO [ESC]" aria-label="Clear the selection" @click="jam.setSelection(null)">×</button>
   </div>
 </template>
 
 <script setup lang="ts">
 /**
- * What to do with the selected bars. SNIPPET and EDIT open the 'snippet'
+ * What to do with the selected bars, and DEL TRACK(S) for the whole tracks
+ * they belong to. SNIPPET and EDIT open the 'snippet'
  * and 'step' dialogs with { selection } and { trackId, bar }.
  */
 import { computed } from 'vue'
@@ -24,10 +26,10 @@ const dialogs = useDialogs()
 
 const sel = computed(() => jam.selection.value!)
 const phrase = computed(() => Math.floor(sel.value.from / 8))
+const tracks = computed(() => sel.value.trackIds.length)
 const what = computed(() => {
   const bars = sel.value.to - sel.value.from + 1
-  const tracks = sel.value.trackIds.length
-  return `${bars} BAR${bars === 1 ? '' : 'S'} × ${tracks}`
+  return `${bars} BAR${bars === 1 ? '' : 'S'} × ${tracks.value}`
 })
 
 function doCopy(): void {
@@ -58,4 +60,5 @@ function doCopy(): void {
   cursor: pointer;
 }
 .sb__x:hover { color: var(--ink); }
+.sb__del:hover { color: var(--pink); }
 </style>

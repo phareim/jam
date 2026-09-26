@@ -34,6 +34,7 @@ const KEYS: Array<[string, string]> = [
   ['CTRL Z', 'UNDO (SHIFT: REDO)'],
   ['CTRL C  V', 'COPY / PASTE THE SELECTED BARS'],
   ['DELETE', 'EMPTY THE SELECTED BARS'],
+  ['SHIFT+DELETE', 'DELETE THE SELECTED TRACKS'],
   ['ESC', 'LET GO OF THE SELECTION'],
   ['?', 'THIS HELP'],
 ]

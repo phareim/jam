@@ -22,6 +22,7 @@
         <button type="button" class="tr__tog tr__w2" :class="{ on: track.mute }" :aria-pressed="!!track.mute" title="MUTE" @click="toggle('mute')">M</button>
         <button type="button" class="tr__tog tr__tog--gold tr__w2" :class="{ on: track.solo }" :aria-pressed="!!track.solo" title="SOLO" @click="toggle('solo')">S</button>
         <button type="button" class="tr__tog tr__tog--pink" :class="{ on: armed }" :aria-pressed="armed" title="ARM: RECORD INTO THIS TRACK" @click="jam.arm(track.id)"><span class="px-dot" /></button>
+        <button type="button" class="tr__x tr__w2" :title="`DELETE ${track.name.toUpperCase()} (UNDO BRINGS IT BACK)`" :aria-label="`Delete ${track.name}`" @click="jam.removeTrack(track.id)">×</button>
       </div>
       <div v-if="open" class="tr__more">
         <div class="tr__line tr__n2">
@@ -82,7 +83,7 @@
 <script setup lang="ts">
 /**
  * One track: its header (instrument glyph, name, ladder level, mute, solo,
- * arm; the glyph opens sound, layer, gain and delete) and its bars grouped
+ * arm, delete; the glyph opens sound, layer, gain and, on a phone, delete) and its bars grouped
  * by phrase. A track that enters above the current intensity is dimmed:
  * it is silent now.
  */
@@ -255,6 +256,19 @@ function setLayer(l: Layer): void { jam.updateTrack(props.track.id, { layer: l }
   cursor: pointer;
 }
 .tr__del:hover { color: var(--pink); }
+.tr__x {
+  flex: none;
+  width: 24px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--subtle);
+  font-size: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tr__x:hover { color: var(--pink); }
 
 .tr__cells { display: flex; gap: var(--phrase-gap); padding-left: var(--phrase-gap); }
 .tr__phrase { display: flex; }

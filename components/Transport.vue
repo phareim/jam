@@ -7,6 +7,9 @@
           <button v-for="m in MENU" :key="m.name" type="button" class="menu__item" :class="`menu__item--${m.tone}`" @click="close(); dialogs.open(m.name)">
             {{ m.label }}<span v-if="m.key" class="menu__key">{{ m.key }}</span>
           </button>
+          <button v-if="jam.emptyTracks.value.length" type="button" class="menu__item menu__item--dim" title="DELETE THE TRACKS WITH NOTHING IN THEM" @click="close(); jam.removeTracks(jam.emptyTracks.value)">
+            DROP EMPTY TRACKS<span class="menu__key">{{ jam.emptyTracks.value.length }}</span>
+          </button>
           <a v-if="!allowed" class="menu__item menu__item--dim" :href="loginUrl()">SIGN IN</a>
         </div>
       </template>
@@ -94,7 +97,8 @@
 
 <script setup lang="ts">
 /**
- * The transport bar: the piece (menu, name, saving, undo), playing (play,
+ * The transport bar: the piece (menu with DROP EMPTY TRACKS when there are
+ * any, name, saving, undo), playing (play,
  * record, click, count-in, tempo, swing), the loop length and the mix
  * (intensity, grow, space, grit). One flat list of controls that CSS lays
  * out in two rows on wide screens, three on tablets in portrait, and on

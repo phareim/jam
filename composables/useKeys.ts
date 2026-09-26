@@ -5,7 +5,7 @@
  *   2. the open dialog's own keys (it handles Escape itself; the host closes
  *      it on Escape otherwise) and nothing else while a dialog is open;
  *   3. the transport keys (JamApp's `global` handler): Space, Enter, [ ],
- *      Tab, Ctrl/Cmd+Z / Shift+Z, Ctrl/Cmd+C / V, Delete, ?, Escape;
+ *      Tab, Ctrl/Cmd+Z / Shift+Z, Ctrl/Cmd+C / V, (Shift+)Delete, ?, Escape;
  *   4. the registered handlers, newest first, until one returns true.
  *
  * Instruments register here while mounted:

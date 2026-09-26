@@ -51,7 +51,11 @@ function globalKey(e: KeyboardEvent): boolean {
   if (k === '[') { jam.setIntensity(jam.piece.value.intensity - 1); return true }
   if (k === ']') { jam.setIntensity(jam.piece.value.intensity + 1); return true }
   if (k === 'Tab') { stepInstrument(e.shiftKey ? -1 : 1); return true }
-  if ((k === 'Delete' || k === 'Backspace') && jam.selection.value) { jam.clearBars(); return true }
+  if ((k === 'Delete' || k === 'Backspace') && jam.selection.value) {
+    if (e.shiftKey) jam.removeTracks(jam.selection.value.trackIds)
+    else jam.clearBars()
+    return true
+  }
   if (k === '?') { dialogs.open('help'); return true }
   if (k === 'Escape') {
     if (jam.selection.value) { jam.setSelection(null); return true }

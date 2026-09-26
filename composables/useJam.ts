@@ -493,9 +493,21 @@ function updateTrack(id: string, patch: Partial<Track>, merge?: string): void {
   }, merge)
 }
 
-function removeTrack(id: string): void {
-  commit({ ...piece.value, tracks: piece.value.tracks.filter(t => t.id !== id) }, 'delete track')
+/** Delete tracks, one undo step; says how many went. */
+function removeTracks(ids: string[]): number {
+  const gone = new Set(ids)
+  const tracks = piece.value.tracks.filter(t => !gone.has(t.id))
+  const n = piece.value.tracks.length - tracks.length
+  if (!n) return 0
+  commit({ ...piece.value, tracks }, n === 1 ? 'delete track' : 'delete tracks')
+  say(`${n} TRACK${n === 1 ? '' : 'S'} DELETED · UNDO BRINGS ${n === 1 ? 'IT' : 'THEM'} BACK`)
+  return n
 }
+
+function removeTrack(id: string): void { removeTracks([id]) }
+
+/** The tracks with no notes or hits in any bar. */
+const emptyTracks = computed(() => piece.value.tracks.filter(t => t.bars.every(b => !b.trim())).map(t => t.id))
 
 function setBars(trackId: string, from: number, bars: string[], label = 'write'): void {
   commit(E.setBars(piece.value, trackId, from, bars), label)
@@ -761,6 +773,8 @@ const api = {
   addTrack,
   updateTrack,
   removeTrack,
+  removeTracks,
+  emptyTracks,
   setBars,
   clearBars,
   copy,
