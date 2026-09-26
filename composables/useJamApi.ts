@@ -39,7 +39,7 @@ export function useJamApi() {
     askFeel: (b: { piece: Piece; messages: Array<{ role: 'petter' | 'opus'; text: string }> }) =>
       $fetch<{ job: Job<{ reply: string; brief: string }> }>('/api/jam/feel', { method: 'POST', ...json(b) }),
     /** Make a radio channel: result { landscape, painting }. */
-    makeChannel: (b: { piece: Piece }) => $fetch<{ job: Job<{ landscape: Record<string, unknown>; painting?: unknown }> }>('/api/jam/channel', { method: 'POST', ...json(b) }),
+    makeChannel: (b: { piece: Piece; written?: boolean }) => $fetch<{ job: Job<{ landscape: Record<string, unknown>; painting?: unknown }> }>('/api/jam/channel', { method: 'POST', ...json(b) }),
 
     getJob: async <R>(id: number) => (await $fetch<{ job: Job<R> }>(`/api/jobs/${id}`)).job,
     /** Poll a job every `everyMs` until done or error (or `signal` aborts); `onStatus` sees each poll. */

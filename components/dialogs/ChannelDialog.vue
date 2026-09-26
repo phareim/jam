@@ -15,6 +15,10 @@
 
     <template v-else>
       <p class="dl-p">OPUS TURNS THE PIECE INTO A CHANNEL THAT PLAYS FOR HOURS, KEEPING YOUR CHORDS, GROOVES AND LINES. THEN A PAINTER PAINTS ITS PLACE.</p>
+      <label class="cd__quote">
+        <input v-model="quote" type="checkbox">
+        <span>QUOTE MY PHRASES: NOW AND THEN THE CHANNEL PLAYS YOUR PHRASES NOTE FOR NOTE BETWEEN THE ONES IT MAKES UP.</span>
+      </label>
       <p v-if="piece.channel" class="dl-hint cd__was">THIS PIECE ALREADY MADE CHANNEL {{ piece.channel }}. MAKING IT AGAIN ADDS ANOTHER.</p>
       <p class="dl-sec">BRIEF</p>
       <p v-if="brief" class="cd__brief">{{ brief }}</p>
@@ -58,6 +62,7 @@ const dialogs = useDialogs()
 const { allowed, loginUrl } = useAuth()
 
 const busy = ref(false)
+const quote = ref(true)
 const brief = computed(() => piece.value.feel?.brief?.trim() ?? '')
 const last = computed(() => jobs.latest('jam-channel', piece.value.id))
 const pending = computed<JamJob | null>(() => (last.value && (last.value.status === 'queued' || last.value.status === 'running') ? last.value : null))
@@ -69,7 +74,7 @@ async function make(): Promise<void> {
   busy.value = true
   if (last.value?.status === 'error') jobs.forget(last.value.id)
   try {
-    await jobs.start('jam-channel', { piece: piece.value })
+    await jobs.start('jam-channel', { piece: piece.value, written: quote.value })
   } catch (err) {
     jam.say(`OPUS: ${(err as Error).message}`.toUpperCase().slice(0, 60), 'warn')
   } finally {
@@ -85,6 +90,8 @@ function done(): void {
 </script>
 
 <style scoped>
+.cd__quote { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 12px; color: var(--ink); cursor: pointer; }
+.cd__quote input { accent-color: var(--gold); width: 18px; height: 18px; margin: 2px 0 0; flex: none; }
 .cd__name { margin: 0 0 8px; font-size: 32px; line-height: 36px; text-shadow: 4px 4px 0 var(--bg); overflow-wrap: anywhere; }
 .cd__id { margin-top: 8px; }
 .cd__was { margin-bottom: 4px; }

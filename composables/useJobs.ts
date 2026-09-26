@@ -145,7 +145,7 @@ function init(): void {
 /** Start an Opus job; returns it, or throws with a short reason. */
 async function start(kind: 'jam-track', body: { piece: Piece; request: string; layer?: string; phrases?: number[] }): Promise<JamJob>
 async function start(kind: 'jam-feel', body: { piece: Piece; messages: FeelMsg[]; line: string }): Promise<JamJob>
-async function start(kind: 'jam-channel', body: { piece: Piece }): Promise<JamJob>
+async function start(kind: 'jam-channel', body: { piece: Piece; written?: boolean }): Promise<JamJob>
 async function start(kind: JamJobKind, body: Record<string, unknown>): Promise<JamJob> {
   const api = useJamApi()
   const piece = body.piece as Piece
@@ -153,7 +153,7 @@ async function start(kind: JamJobKind, body: Record<string, unknown>): Promise<J
   try {
     if (kind === 'jam-track') res = await api.askTrack(body as Parameters<typeof api.askTrack>[0])
     else if (kind === 'jam-feel') res = await api.askFeel({ piece, messages: (body.messages as FeelMsg[]).map(({ role, text }) => ({ role, text })) })
-    else res = await api.makeChannel({ piece })
+    else res = await api.makeChannel({ piece, written: body.written !== false })
   } catch (err) {
     throw new Error(errText(err))
   }
