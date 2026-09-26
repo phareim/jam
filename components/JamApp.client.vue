@@ -122,7 +122,8 @@ onBeforeUnmount(() => {
   .app { --dock-h: clamp(170px, 34vh, 240px); }
 }
 @media (orientation: landscape) and (max-height: 500px) {
-  .app { --dock-h: 46vh; }
+  /* A phone on its side is for playing: the instrument gets over half the screen. */
+  .app { --dock-h: 56vh; }
   .app__harmony { display: none; }
 }
 </style>

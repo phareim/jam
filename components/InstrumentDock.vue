@@ -39,17 +39,17 @@
  * switching tabs unmounts it, so release held notes and unregister keys in
  * onBeforeUnmount. It takes no props and fills the dock body (a flex item of
  * the body's height; `height: 100%` works). What it uses:
- *   - `useJam().live(layer, sound, vel)` to sound a note (returns a handle to
- *     release), with `useJam().targetFor(instrument)` for the layer and the
- *     voice or kit (the armed track's, else the instrument's default);
- *   - `useJam().currentChord()`, `scale()`, `key()` to light chord and scale
- *     tones; `position` for anything that follows the beat;
+ *   - `useRecorder().play(instrument, { midi } | { hit }, vel)` to sound a
+ *     note (returns a handle to release): the armed track's voice or kit,
+ *     else the instrument's chosen sound, captured while REC is on;
+ *   - `useSounding()` (chord and scale pitch classes, whether to print
+ *     computer keys) and `usePointers()` (one note per finger);
  *   - `useKeys().register({ id, down, up, blur })` for its computer keys, and
  *     `useKeys().keyboardUsed` to print the key names on the keys;
- *   - pointer events with `touch-action: none` on the playing surface
- *     (several fingers at once; each pointerId is one note).
- * The recorder (the REC button, `useJam().recording`) captures what the
- * instruments play; an instrument only plays.
+ *   - pointer events with `touch-action: none` on the playing surface (the
+ *     global `.inst-surface` class; several fingers at once);
+ *   - `<InstrumentHeader :instrument>` on top: the track, the sound, ARM
+ *     and the recording options, with a slot for its own controls.
  */
 import { computed, defineAsyncComponent, ref, shallowRef, watch } from 'vue'
 import type { Component } from 'vue'
@@ -59,6 +59,8 @@ import { load, save } from '~/composables/storage'
 
 const jam = useJam()
 const { instrument, recording, armed } = jam
+// The recorder listens from here on, whichever instrument is open (or none).
+useRecorder()
 
 const loaders = import.meta.glob<{ default: Component }>('./instruments/Instrument*.vue')
 const cache = new Map<string, Component>()

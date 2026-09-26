@@ -12,6 +12,8 @@ import { computed, defineAsyncComponent, watch } from 'vue'
 import type { Component } from 'vue'
 
 const dialogs = useDialogs()
+// Opus's jobs outlive their dialogs: pick up any still running (after a reload too).
+useJobs()
 const keys = useKeys()
 const cur = dialogs.current
 const cache = new Map<string, Component>()

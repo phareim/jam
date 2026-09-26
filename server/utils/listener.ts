@@ -5,8 +5,11 @@
  */
 import type { H3Event } from 'h3'
 import { getReaderUser } from '~/server/utils/readerSession'
+import { devUser } from '~/server/utils/member'
 
 export async function memberEmail(event: H3Event): Promise<string | null> {
+  const dev = devUser(event)
+  if (dev) return dev.email
   const user = await getReaderUser(event)
   if (!user) return null
   const list = (useRuntimeConfig(event).allowedUserEmails || '')

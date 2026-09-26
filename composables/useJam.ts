@@ -40,6 +40,8 @@
  *     watches it and commits with setBars / transact), `countIn`, `click`,
  *     `instrument` (the dock's active tab).
  *   - `selection` { trackIds, from, to } (loop bars, inclusive) and `clipboard`.
+ *   - `amend(next)`: change the piece inside the last undo step (the
+ *     recorder's later passes of one take).
  */
 import { computed, reactive, ref, shallowRef } from 'vue'
 import type { BarPlan, Chord, ConductorLike, DrumEvent, Key, KitId, Landscape, Layer, LiveNote, LiveSound, Mode, RadioPlayer, VoiceId } from '~/radio/engine/types.ts'
@@ -198,7 +200,7 @@ let raf = 0
 function ensurePlayer(): RadioPlayer {
   if (player.value) return player.value
   inner = createPieceConductor({
-    piece: piece.value,
+    piece: heard(piece.value),
     lookup,
     controls: { intensity: piece.value.intensity, space: controls.space, grit: controls.grit },
     click: click.value,
@@ -356,11 +358,32 @@ function onBar(cb: (plan: BarPlan) => void): () => void {
   return () => { barListeners.delete(cb) }
 }
 
+// ---- preview: tracks heard but not in the piece (the dialogs' KEEP / DROP) -------------------
+
+/** Opus's proposed tracks while they are auditioned: the conductor plays the piece plus these; `solo` plays them alone. */
+const preview = shallowRef<{ tracks: Track[]; solo: boolean } | null>(null)
+
+/** The piece as the conductor gets it: with the preview tracks, which sound at any intensity. */
+function heard(p: Piece): Piece {
+  const pv = preview.value
+  if (!pv) return p
+  const n = E.loopBars(p)
+  const extra: Track[] = pv.tracks.map((t, i) => ({ ...t, id: `preview-${i}`, enter: Math.min(t.enter, p.intensity) as Level, mute: false, solo: pv.solo, bars: E.fitBars(t.bars, n) }))
+  const tracks = pv.solo ? p.tracks.map(t => ({ ...t, solo: false })) : p.tracks
+  return { ...p, tracks: [...tracks, ...extra] }
+}
+
+/** Hear `tracks` with the piece (or alone, `solo`) without adding them; null ends the preview. Not an undo step. */
+function setPreview(tracks: Track[] | null, solo = false): void {
+  preview.value = tracks && tracks.length ? { tracks, solo } : null
+  inner?.setPiece(heard(piece.value))
+}
+
 // ---- edits and history ---------------------------------------------------------------------
 
 function setPiece(next: Piece): void {
   piece.value = next
-  inner?.setPiece(next)
+  inner?.setPiece(heard(next))
   saveState.rev++
   const n = E.loopBars(next)
   if (cursor.value >= n) cursor.value = 0
@@ -384,6 +407,18 @@ function commit(next: Piece, label: string, merge?: string): void {
   history.undo = undoStack.length
   history.redo = 0
   history.last = label
+}
+
+/**
+ * Change the piece inside the last undo step, without a new snapshot: a
+ * recording's later passes (each take is one step). Clears redo.
+ */
+function amend(next: Piece): void {
+  if (next === piece.value) return
+  lastMerge = null
+  redoStack.length = 0
+  history.redo = 0
+  setPiece(next)
 }
 
 /** Any edit: mutate a copy of the piece; one undo step. */
@@ -557,7 +592,7 @@ function setIntensity(level: number): void {
   const intensity = Math.max(0, Math.min(4, Math.round(level))) as Level
   if (intensity === piece.value.intensity) return
   piece.value = { ...piece.value, intensity }
-  inner?.setPiece(piece.value)
+  inner?.setPiece(heard(piece.value))
   inner?.setControls({ intensity })
   saveState.rev++
   scheduleAutosave()
@@ -672,7 +707,7 @@ async function refreshLandscapes(): Promise<void> {
   try {
     const data = await $fetch<{ landscapes: Landscape[] }>('/api/landscapes')
     composed.value = (data.landscapes ?? []).map(l => ({ ...l, origin: 'opus' as const }))
-    inner?.setPiece(piece.value)
+    inner?.setPiece(heard(piece.value))
   } catch { /* signed out or offline: built-ins only */ }
 }
 
@@ -728,8 +763,10 @@ const api = {
   remoteDirty,
   toast,
   player,
+  preview,
   // edits (one undo step each)
   commit,
+  amend,
   transact,
   undo,
   redo,
@@ -752,6 +789,7 @@ const api = {
   paste,
   dupPhrase,
   grow,
+  setPreview,
   loadPiece,
   newPiece,
   // transport and controls
