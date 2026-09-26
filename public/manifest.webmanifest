@@ -1,0 +1,10 @@
+{
+  "name": "Jam",
+  "short_name": "Jam",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0616",
+  "theme_color": "#0b0616",
+  "orientation": "any",
+  "icons": []
+}
