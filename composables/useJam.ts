@@ -186,7 +186,7 @@ function ensurePlayer(): RadioPlayer {
   inner = createPieceConductor({
     piece: heard(piece.value),
     lookup,
-    controls: { intensity: piece.value.intensity, space: controls.space, grit: controls.grit },
+    controls: { intensity: piece.value.intensity, space: controls.space, era: eraOf(controls.grit) },
     click: click.value,
   })
   jc = createJamConductor(inner)
@@ -592,7 +592,13 @@ function savePrefs(): void {
   save(LS_PREFS, { space: controls.space, grit: controls.grit, click: click.value, countIn: countIn.value, instrument: instrument.value } satisfies Prefs)
 }
 function setSpace(v: number): void { controls.space = v; inner?.setControls({ space: v }); savePrefs() }
-function setGrit(v: number): void { controls.grit = v; inner?.setControls({ grit: v }); savePrefs() }
+/**
+ * jam's GRIT knob (clean → tape) on the radio's Era axis: its analog half,
+ * where the tape deepens. A piece's own instruments never change here; the
+ * radio's 8-bit half (chip voices, bit crush) is not offered in jam.
+ */
+function eraOf(grit: number): number { return 0.5 + 0.5 * grit }
+function setGrit(v: number): void { controls.grit = v; inner?.setControls({ era: eraOf(v) }); savePrefs() }
 function setClick(on: boolean): void { click.value = on; inner?.setClick(on); savePrefs() }
 function setCountIn(on: boolean): void { countIn.value = on; savePrefs() }
 function setInstrument(i: Instrument): void { instrument.value = i; savePrefs() }
