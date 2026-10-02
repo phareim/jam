@@ -14,5 +14,5 @@
   "repository": { "type": "git", "url": "git+https://github.com/phareim/jam.git" },
   "license": "ISC",
   "dependencies": { "nuxt": "^3.21.0" },
-  "devDependencies": { "wrangler": "^4.40.0" }
+  "devDependencies": { "wrangler": "^4.147.0" }
 }
