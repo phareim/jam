@@ -87,9 +87,12 @@ function when(t: string | number): string {
   const d = new Date(t)
   if (Number.isNaN(d.getTime())) return ''
   const days = Math.floor((Date.now() - d.getTime()) / 86_400_000)
+  // Calendar days back (local midnights; rounded for the 23- and 25-hour days).
+  const midnight = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const ago = Math.round((midnight(new Date()) - midnight(d)) / 86_400_000)
   const hm = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  if (days < 1 && d.getDate() === new Date().getDate()) return `TODAY ${hm}`
-  if (days < 2) return `YESTERDAY ${hm}`
+  if (ago === 0) return `TODAY ${hm}`
+  if (ago === 1) return `YESTERDAY ${hm}`
   return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: days > 300 ? 'numeric' : undefined }).toUpperCase()
 }
 
