@@ -1,4 +1,4 @@
-// jam.phareim.no: Nuxt 3 on a Cloudflare Worker behind Reader login. The
+// jam.phareim.no: Nuxt 4 on a Cloudflare Worker behind Reader login. The
 // music runs client-side on the radio's engine (the `radio/` submodule);
 // the Worker renders the shell and proxies saving and Opus to radio-api.
 import { realpathSync } from 'node:fs'
